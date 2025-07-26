@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
 
 # =============================
-# 🔐 AUTENTIKASI LOGIN SEDERHANA
+# 🔐 LOGIN SEDERHANA
 # =============================
 USER_CREDENTIALS = {
     "regyana": "rahmasari"
@@ -21,7 +22,6 @@ def login():
         else:
             st.sidebar.error("❌ Username atau password salah")
 
-# Inisialisasi session state login
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -37,8 +37,8 @@ st.title("🏥 Pivot & Sinkronisasi Pembayaran Rumah Sakit")
 
 st.markdown("""
 Silakan upload dua file berikut:
-- **File 1:** `MDI.xlsx` (data billing rumah sakit)
-- **File 2:** File SAP  (misal: `Data SAP Halodoc ...`)
+- **File 1:** `MDI22.xlsx` (data billing rumah sakit)
+- **File 2:** File SAP pembayaran (misal: `Data SAP Halodoc ...`)
 """)
 
 mdi_file = st.file_uploader("📤 Upload File MDI (Billing)", type=["xlsx"])
@@ -46,11 +46,11 @@ payment_file = st.file_uploader("📤 Upload File SAP (Pembayaran)", type=["xlsx
 
 if mdi_file and payment_file:
     try:
-        # === Load file Excel ===
+        # === BACA FILE ===
         mdi_df = pd.read_excel(mdi_file, sheet_name="MDI")
         payment_df = pd.read_excel(payment_file)
 
-        # === Buat Pivot Berdasarkan Case ===
+        # === PIVOT DATA ===
         pivot_df = mdi_df.groupby(
             ['Institution', 'Case', 'Case Type', 'Patient', 'Admission Date', 'Payor'],
             as_index=False
@@ -59,23 +59,28 @@ if mdi_file and payment_file:
             'Net Value': 'sum'
         })
 
-        # === Sinkronisasi dengan Data Pembayaran ===
+        # === SINKRONISASI DATA ===
         payment_cols = ['Case', 'Billing Date', 'Due Date', 'Payment Date', 'Payment Status', 'Days for Payment']
         payment_trimmed = payment_df[payment_cols]
         merged_df = pd.merge(pivot_df, payment_trimmed, on='Case', how='left')
 
-        # === Tampilkan Hasil ===
+        # === TAMPILKAN TABEL ===
         st.success(f"✅ Login berhasil! Selamat datang, {st.session_state.username}")
         st.subheader("📊 Hasil Sinkronisasi Data")
         st.dataframe(merged_df)
 
-        # === Tombol Download Excel ===
+        # === KONVERSI EXCEL (perbaikan to_excel) ===
         @st.cache_data
         def convert_df(df):
-            return df.to_excel(index=False, engine='openpyxl')
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='Pivot-Sinkron')
+            processed_data = output.getvalue()
+            return processed_data
 
         excel_data = convert_df(merged_df)
 
+        # === TOMBOL DOWNLOAD ===
         st.download_button(
             label="📥 Download Hasil Sinkronisasi",
             data=excel_data,
