@@ -37,8 +37,8 @@ st.title("🏥 Pivot & Sinkronisasi Pembayaran Rumah Sakit")
 
 st.markdown("""
 Silakan upload dua file berikut:
-- **File 1:** `MDI22.xlsx` (data billing rumah sakit)
-- **File 2:** File SAP pembayaran (misal: `Data SAP Halodoc ...`)
+- **File 1:** `MDI.xlsx` (data billing rumah sakit)
+- **File 2:** File SAP  (misal: `Data SAP Halodoc ...`)
 """)
 
 mdi_file = st.file_uploader("📤 Upload File MDI (Billing)", type=["xlsx"])
